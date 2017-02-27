@@ -1,0 +1,258 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2016-09-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "automationAccountName": {
+      "type": "string",
+      "defaultValue": "automationAccount",
+      "metadata": {
+        "description": "The name of the Azure Automation account you want to deploy."
+      }
+    },
+    "azureSubscriptionId": {
+      "type": "string",
+      "metadata": {
+        "description": "The ID of the Azure subscription the VMS are running in."
+      }
+    },
+    "azureSubscriptionUserName": {
+      "type": "string",
+      "metadata": {
+        "description": "The User Name for the Azure Automation credential used to interact with your AzureRM subscription."
+      }
+    },
+    "azureSubscriptionPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "The Password for the Azure Automation credential used to interact with your AzureRM subscription."
+      }
+    },
+    "microsoftTeamsNotificationURI": {
+      "type": "string",
+      "metadata": {
+        "description": "The URI for your Microsoft Teams Notification Channel."
+      }
+    },
+    "jobScheduleStartTime": {
+      "type": "string",
+      "defaultValue": "9999-12-01T23:59:00+00:00",
+      "metadata": {
+        "description": "The time to start the schedule on.  This is a datetime in Automation (9999-12-01T23:59:00+00:00). This also has to be 5 mins in the future."
+      }
+    },
+    "jobScheduleGuid": {
+      "type": "string",
+      "metadata": {
+        "description": "The GUID for the job schedule. This identifier links the schedule to the runbook."
+      }
+    }
+  },
+  "variables": {
+    "automationAccountSKU": "Free",
+    "storageArtifactLocation": "https://github.com/bentaylorwork/azure-arm-templates/automation-deallocation/runBooks/"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Automation/automationAccounts",
+      "name": "[parameters('automationAccountName')]",
+      "apiVersion": "2015-10-31",
+      "location": "[resourceGroup().location]",
+      "tags": {
+        "solution": "vmAutoShutdown"
+      },
+      "properties": {
+        "mode": "Incremental",
+        "sku": {
+          "name": "[variables('automationAccountSKU')]"
+        }
+      },
+      "resources": [
+        {
+          "name": "azureCredential",
+          "type": "credentials",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "UserName": "[parameters('azureSubscriptionUserName')]",
+            "Password": "[parameters('azureSubscriptionPassword')]"
+          }
+        },
+        {
+          "name": "azureSubscriptionID",
+          "type": "variables",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "description": "",
+            "isEncrypted": 0,
+            "type": "string",
+            "value": "[concat('\"', parameters('azureSubscriptionId'), '\"')]"
+          }
+        },
+        {
+          "name": "microsoftTeamsNotificationURI",
+          "type": "variables",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "description": "",
+            "isEncrypted": 0,
+            "type": "string",
+            "value": "[concat('\"', parameters('microsoftTeamsNotificationURI'), '\"')]"
+          }
+        },
+        {
+          "name": "Get-ShouldVmBeRunning",
+          "type": "runbooks",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "runbookType": "Script",
+            "logProgress": "false",
+            "logVerbose": "false",
+            "description": "This RunBook determines whether the VM should be currently running",
+            "publishContentLink": {
+              "uri": "[uri(variables('storageArtifactLocation'), 'Get-ShouldVmBeRunning.ps1')]",
+              "version": "1.0.0.0"
+            }
+          }
+        },
+        {
+          "name": "Set-VmPowerState",
+          "type": "runbooks",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "runbookType": "Script",
+            "logProgress": "false",
+            "logVerbose": "false",
+            "description": "This RunBook makes sure the VM is in the required state.",
+            "publishContentLink": {
+              "uri": "[uri(variables('storageArtifactLocation'), 'Set-VmPowerState.ps1')]",
+              "version": "1.0.0.0"
+            }
+          }
+        },
+        {
+          "name": "Invoke-vmDeallocation",
+          "type": "runbooks",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "runbookType": "Script",
+            "logProgress": "false",
+            "logVerbose": "false",
+            "description": "The RunBook loops over all the VMs in the subscription looking for the autoshut down tag.",
+            "publishContentLink": {
+              "uri": "[uri(variables('storageArtifactLocation'), 'Invoke-vmDeallocation.ps1')]",
+              "version": "1.0.0.0"
+            }
+          }
+        },
+        {
+          "name": "Send-MicrosoftTeamMessage",
+          "type": "runbooks",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "runbookType": "Script",
+            "logProgress": "false",
+            "logVerbose": "false",
+            "description": "This RunBook handles the sending of notifications to a Microsoft Teams Channel.",
+            "publishContentLink": {
+              "uri": "[uri(variables('storageArtifactLocation'), 'Send-MicrosoftTeamMessage.ps1')]",
+              "version": "1.0.0.0"
+            }
+          }
+        },
+        {
+          "type": "schedules",
+          "name": "scheduleVMPowerStatus",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "description": "",
+            "startTime": "[parameters('jobSchedulestartTime')]",
+            "expiryTime": "9999-12-31T23:59:00+00:00",
+            "isEnabled": true,
+            "interval": 1,
+            "frequency": "Hour"
+          },
+          "resources": []
+        },
+        {
+          "name": "[parameters('jobScheduleGuid')]",
+          "type": "jobSchedules",
+          "apiVersion": "2015-10-31",
+          "location": "[resourceGroup().location]",
+          "dependsOn": [
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'))]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/runbooks/Invoke-vmDeallocation')]",
+            "[concat('Microsoft.Automation/automationAccounts/', parameters('automationAccountName'), '/schedules/scheduleVMPowerStatus')]"
+          ],
+          "tags": {
+            "solution": "vmAutoShutdown"
+          },
+          "properties": {
+            "runbook": {
+              "name": "Invoke-vmDeallocation"
+            },
+            "schedule": {
+              "name": "scheduleVMPowerStatus"
+            }
+          }
+        }
+      ],
+      "dependsOn": []
+    }
+  ],
+  "outputs": {}
+}
