@@ -101,7 +101,7 @@
       "Runbook": {
         "PublishOmsHyperVReplica": {
           "name": "Publish-omsHyperVReplica",
-          "type": "PowerShell",
+          "type": "Script",
           "description": "This runbook publishes Hyper-V replica statistics to OMS."
         }
       },
