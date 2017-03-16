@@ -1,7 +1,7 @@
 # De-Allocation ARM Template
 
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fgithub.com%2Fbentaylorwork%2Fazure-arm-templates%2Fblob%2Fmaster%2Fautomation-deallocation%2Fazuredeploy.json) 
-[![Deploy to Azure](http://armviz.io/visualizebutton.png)](http://armviz.io/#/?load=https%3A%2F%2Fgithub.com%2Fbentaylorwork%2Fazure-arm-templates%2Fblob%2Fmaster%2Fautomation-deallocation%2Fazuredeploy.json) 
+[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbentaylorwork%2Fazure-arm-templates%2Fmaster%2Fautomation-deallocation%2Fazuredeploy.json) 
+[![Deploy to Azure](http://armviz.io/visualizebutton.png)](http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fbentaylorwork%2Fazure-arm-templates%2Fmaster%2Fautomation-deallocation%2Fazuredeploy.json) 
 
 
 ## Overview
