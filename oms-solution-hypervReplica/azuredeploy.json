@@ -84,7 +84,7 @@
     }
   },
   "variables": {
-    "baseURI": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/oms-solution-hypervReplica/assets/",
+    "baseURI": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/oms-solution-hypervReplica/",
     "automation": {
       "Asset": {
         "omsHypervReplicaRunNumber": {
