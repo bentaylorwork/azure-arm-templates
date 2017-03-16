@@ -49,7 +49,7 @@
   },
   "variables": {
     "automationAccountSKU": "Free",
-    "storageArtifactLocation": "https://github.com/bentaylorwork/azure-arm-templates/automation-deallocation/runBooks/"
+    "storageArtifactLocation": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/automation-deallocation/runBooks/"
   },
   "resources": [
     {
