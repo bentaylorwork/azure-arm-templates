@@ -7,7 +7,9 @@
 ## Overview
 Deploys all the resources required to Start and Stop (De-Allocate) ARM VMs based on a tags.
 
-## Required Tags On The VM's To Be De-Allocated?The tag on the VMs should be in the format below. With the tag value being the times the VM should be on.
+## Required Tags On The VM's To Be De-Allocated
+
+The tag on the VMs should be in the format below. With the tag value being the times the VM should be on.
 
 | Tag Name          | Tag Value   |
 | ----------------- |:-----------:|
