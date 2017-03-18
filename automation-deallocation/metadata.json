@@ -1,0 +1,7 @@
+{
+    "itemDisplayName": "Azure Automation - VM De-Allocation",
+    "description": "A set of runbooks to de-allocates and start VM's based on a time tag.",
+    "summary": "A set of runbooks to de-allocates and start VM's based on a time tag. It notifies a Microsoft Team Channel of the actions",
+    "githubUsername": "bentaylorwork",
+    "dateUpdated": "2017-03-18"
+}
