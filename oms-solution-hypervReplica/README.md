@@ -34,18 +34,6 @@ An OMS Solution that helps you manage Hyper-V replica. It give you visibility of
 	 
 	This can be installed by any supported method.
 
-	When installing the OMS Solution you will be asked for the following parameters.
-
-    * workspaceName - The name of your OMS Log Analytics workspace.
-    * workspaceRegionId - The region of your OMS Log Analytics workspace.
-    * accountName - The name of the Automation account to use.  If this account exists, check the pricing tier and tags to make sure they match the exisitng account.
-    * regionId - The region the Automaiton account is located in.
-    * pricingTier - The pricing tier for the Automation account.
-    * onPremisesRunAsUserName - The username for the Account That Has Access To The On-Premises servers.
-    * onPremisesRunAsPassword - The password for the Account That Has Access To The On-Premises servers.
-    * workSpaceID - The Workspace ID for your OMS workspace.
-    * workSpacePrimaryKey - The Workspace Primary Key for your OMS workspace.
-
 3) Create an automation schedule specifying how often you want the information in the Hyper-V replica OMS Solution updating.
 
 ![Hyper-V Replica OMS Solution](images/hypervReplicaOMSSchedule.png "Azure Automation Schedule")
