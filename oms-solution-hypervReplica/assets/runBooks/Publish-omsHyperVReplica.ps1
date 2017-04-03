@@ -40,7 +40,6 @@ workflow Publish-omsHyperVReplica
 															health                    = $vm.health
 															LastReplicationTime       = $vm.LastReplicationTime
 															AverageReplicationSize    = $vm.AvgReplSize
-															AverageReplicationLatency = $vm.AverageReplicationLatency
 															LogTime                   = [Datetime]::UtcNow
 															runNumber                 = $omsRunNumber
 														}

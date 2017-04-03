@@ -1,6 +1,6 @@
 ﻿{
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
+  "contentVersion": "1.0.1.0",
   "parameters": {
     "workspaceName": {
       "type": "string",
@@ -140,17 +140,17 @@
       "resources": [
         {
           "apiVersion": "2015-11-01-preview",
-          "name": "[variables('solution').name]",
+          "name": "[variables('solution').Name]",
           "type": "views",
           "location": "[parameters('workspaceRegionId')]",
-          "id": "[Concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspacename'),'/views/', variables('solution').name)]",
+          "id": "[Concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspacename'),'/views/', variables('solution').Name)]",
           "dependson": [
             "[Concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]"
           ],
           "properties": {
-            "Id": "[variables('solution').name]",
-            "Name": "[variables('solution').name]",
-            "Author": "[variables('solution').author]",
+            "Id": "[variables('solution').Name]",
+            "Name": "[variables('solution').Name]",
+            "Author": "[variables('solution').Author]",
             "DisplayName": "[variables('solution').DisplayName]",
             "Description": "[variables('solution').Description]",
             "Source": "Local",
@@ -225,31 +225,19 @@
                 }
               },
               {
-                "Id": "TwoTrendsAndListBuilderBlade",
+                "Id": "NumberTileListBuilderBlade",
                 "Type": "Blade",
                 "Version": 0,
                 "Configuration": {
                   "General": {
-                    "title": "Current Failed Hyper-V Replicas",
+                    "title": "Current Failed Hyper-V Replicas By Computer",
                     "newGroup": false,
                     "icon": "",
                     "useIcon": false
                   },
-                  "Trend1": {
-                    "Legend": "Failed Replicas",
-                    "LegendColor": "#00188f",
-                    "ChartQuery": "Type=hyperVReplica_CL NOT(state_s:\"Replicating\")",
-                    "Calculation": {
-                      "Operation": "Last Sample"
-                    }
-                  },
-                  "Trend2": {
-                    "Legend": "Successful Replicas",
-                    "LegendColor": "#0072c6",
-                    "ChartQuery": "Type=hyperVReplica_CL state_s=Replicating",
-                    "Calculation": {
-                      "Operation": "Last Sample"
-                    }
+                  "Tile": {
+                    "Query": "Type=hyperVReplica_CL NOT(state_s:\"Replicating\") runNumber_d IN { Type=hyperVReplica_CL | measure max(runNumber_d) by runNumber_d | sort runNumber_d DESC | top 1 }",
+                    "Legend": "Number Of VMs With Broken Replication"
                   },
                   "List": {
                     "Query": "Type=hyperVReplica_CL NOT(state_s:\"Replicating\") runNumber_d IN { Type=hyperVReplica_CL | measure max(runNumber_d) by runNumber_d | sort runNumber_d DESC | top 1 } | Measure count() by primaryServer_s",
@@ -267,18 +255,136 @@
                         {
                           "name": "Normal",
                           "threshold": "Default",
-                          "color": "#007233",
+                          "color": "#009e49",
                           "isDefault": true
                         },
                         {
                           "name": "Warning",
                           "threshold": "0",
-                          "color": "#fff100",
+                          "color": "#fcd116",
                           "isDefault": false
                         },
                         {
                           "name": "Error",
                           "threshold": "2",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "LineChartBuilderBlade",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "Hyper-V Replica - Replication Size",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Header": {
+                    "Title": "Average Replica Size",
+                    "Subtitle": ""
+                  },
+                  "LineChart": {
+                    "Query": "Type=hyperVReplica_CL  | EXTEND div(AverageReplicationSize_d,1048576 ) AS AverageReplicationSize_MB | measure avg(AverageReplicationSize_MB) Interval 1HOUR",
+                    "yAxis": {
+                      "isLogarithmic": false,
+                      "units": {
+                        "baseUnitType": "",
+                        "baseUnit": "",
+                        "displayUnit": ""
+                      },
+                      "customLabel": ""
+                    }
+                  },
+                  "List": {
+                    "Query": "Type=hyperVReplica_CL state_s:\"Replicating\" | EXTEND div(AverageReplicationSize_d,1048576 ) AS AverageReplicationSize_MB | measure avg(AverageReplicationSize_MB) by name_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "operation": "Summary",
+                    "ColumnsTitle": {
+                      "Name": "VM Name",
+                      "Value": "AVG Replica Size"
+                    },
+                    "Color": "#0072c6",
+                    "thresholds": {
+                      "isEnabled": true,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "30",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "50",
+                          "color": "#ba141a",
+                          "isDefault": false
+                        }
+                      ]
+                    },
+                    "NameDSVSeparator": "",
+                    "NavigationQuery": "{selected item}"
+                  }
+                }
+              },
+              {
+                "Id": "NumberTileListBuilderBlade",
+                "Type": "Blade",
+                "Version": 0,
+                "Configuration": {
+                  "General": {
+                    "title": "Computers Actively Being Monitored",
+                    "newGroup": false,
+                    "icon": "",
+                    "useIcon": false
+                  },
+                  "Tile": {
+                    "Legend": "",
+                    "Query": "Type=hyperVReplica_CL runNumber_d IN { Type=hyperVReplica_CL | measure max(runNumber_d) by runNumber_d | sort runNumber_d DESC | top 1 } | Dedup primaryServer_s | Select primaryServer_s"
+                  },
+                  "List": {
+                    "Query": "Type=hyperVReplica_CL runNumber_d IN { Type=hyperVReplica_CL | measure max(runNumber_d) by runNumber_d | sort runNumber_d DESC | top 1 } | Dedup primaryServer_s | Select primaryServer_s",
+                    "HideGraph": false,
+                    "enableSparklines": false,
+                    "ColumnsTitle": {
+                      "Name": "Computer",
+                      "Value": ""
+                    },
+                    "Color": "#0072c6",
+                    "operation": "Summary",
+                    "thresholds": {
+                      "isEnabled": false,
+                      "values": [
+                        {
+                          "name": "Normal",
+                          "threshold": "Default",
+                          "color": "#009e49",
+                          "isDefault": true
+                        },
+                        {
+                          "name": "Warning",
+                          "threshold": "60",
+                          "color": "#fcd116",
+                          "isDefault": false
+                        },
+                        {
+                          "name": "Error",
+                          "threshold": "90",
                           "color": "#ba141a",
                           "isDefault": false
                         }
@@ -324,6 +430,18 @@
                     {
                       "query": "Type=hyperVReplica_CL LastReplicationTime_t<NOW-24HOURS runNumber_d IN { Type=hyperVReplica_CL | measure max(runNumber_d) by runNumber_d | sort runNumber_d DESC | top 1 } | Select name_s, LastReplicationTime_t | Sort LastReplicationTime_t asc",
                       "displayName": "Last Time VM Successfully Replicated (Older Than 24 Hours)"
+                    },
+                    {
+                      "query": "Type=hyperVReplica_CL runNumber_d IN { Type=hyperVReplica_CL | measure max(runNumber_d) by runNumber_d | sort runNumber_d DESC | top 1 } | Dedup primaryServer_s | Select primaryServer_s",
+                      "displayName": "Computers Being Actively Monitored"
+                    },
+                    {
+                      "query": "Type=hyperVReplica_CL  | EXTEND div(AverageReplicationSize_d,1048576 ) AS AverageReplicationSize_MB | measure avg(AverageReplicationSize_MB) Interval 1HOUR",
+                      "displayName": "Average Replication Size"
+                    },
+                    {
+                      "query": "Type=hyperVReplica_CL state_s:\"Replicating\" | EXTEND div(AverageReplicationSize_d,1048576 ) AS AverageReplicationSize_MB | measure avg(AverageReplicationSize_MB) by name_s",
+                      "displayName": "Average Replication Size by VM"
                     }
                   ]
                 }
@@ -410,8 +528,7 @@
           "dependsOn": [
             "[concat('Microsoft.Automation/automationAccounts/', parameters('accountName'))]"
           ],
-          "tags": {
-          },
+          "tags": {},
           "properties": {
             "runbookType": "[variables('automation').Runbook.PublishOmsHyperVReplica.type]",
             "logProgress": "false",
@@ -455,7 +572,7 @@
           }
         },
         {
-          "name": "[concat(parameters('accountName'), '/', variables('automation').module.OMSDataInjection.name)]",
+          "name": "[concat(parameters('accountName'), '/', variables('automation').Module.OMSDataInjection.name)]",
           "type": "microsoft.automation/automationAccounts/modules",
           "apiVersion": "2015-01-01-preview",
           "location": "[parameters('regionId')]",
@@ -465,7 +582,7 @@
           "tags": {},
           "properties": {
             "contentLink": {
-              "uri": "[concat(variables('baseURI'), 'assets/modules/', variables('automation').module.OMSDataInjection.name, '.zip') ]"
+              "uri": "[concat(variables('baseURI'), 'assets/modules/', variables('automation').Module.OMSDataInjection.name, '.zip') ]"
             }
           }
         },
@@ -476,7 +593,7 @@
           "location": "[parameters('regionId')]",
           "dependsOn": [
             "[concat('Microsoft.Automation/automationAccounts/', parameters('accountName'))]",
-            "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/modules/', variables('automation').module.OMSDataInjection.name)]"
+            "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/modules/', variables('automation').Module.OMSDataInjection.name)]"
           ],
           "tags": {},
           "properties": {
@@ -491,12 +608,11 @@
               "PrimaryKey": "[parameters('workSpacePrimaryKey')]"
             }
           }
-
         }
       ]
     },
     {
-      "name": "[variables('solution').name]",
+      "name": "[variables('solution').Name]",
       "type": "Microsoft.OperationsManagement/solutions",
       "location": "[parameters('workspaceRegionId')]",
       "apiVersion": "2015-11-01-preview",
@@ -505,28 +621,28 @@
         "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/runbooks/', variables('automation').Runbook.PublishOmsHyperVReplica.name)]",
         "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/credentials/', variables('automation').Asset.omsHypervReplicaRunAsAccount.name)]",
         "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/variables/', variables('automation').Asset.omsHypervReplicaRunNumber.name)]",
-        "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/modules/', variables('automation').module.OMSDataInjection.name)]",
-        "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/connections/', variables('automation').connection.OMSDataInjection.name)]",
-        "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'), '/views/', variables('solution').name)]"
+        "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/modules/', variables('automation').Module.OMSDataInjection.name)]",
+        "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/connections/', variables('automation').Connection.OMSDataInjection.name)]",
+        "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'), '/views/', variables('solution').Name)]"
       ],
       "plan": {
-        "name": "[variables('solution').name]",
+        "name": "[variables('solution').Name]",
         "publisher": "[variables('solution').Publisher]",
         "promotionCode": "[variables('solution').PromotionCode]",
-        "product": "[variables('solution').product]"
+        "product": "[variables('solution').Product]"
       },
       "properties": {
         "workspaceResourceId": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'))]",
         "referencedResources": [
           "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'))]",
-          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/modules/', variables('automation').module.OMSDataInjection.name)]"
+          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/modules/', variables('automation').Module.OMSDataInjection.name)]"
         ],
         "containedResources": [
           "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/runbooks/', variables('automation').Runbook.PublishOmsHyperVReplica.name)]",
           "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/credentials/', variables('automation').Asset.omsHypervReplicaRunAsAccount.name)]",
           "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/variables/', variables('automation').Asset.omsHypervReplicaRunNumber.name)]",
-          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/connections/', variables('automation').connection.OMSDataInjection.name)]",
-          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'), '/views/', variables('solution').name)]"
+          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Automation/automationAccounts/', parameters('accountName'), '/connections/', variables('automation').Connection.OMSDataInjection.name)]",
+          "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.OperationalInsights/workspaces/', parameters('workspaceName'), '/views/', variables('solution').Name)]"
         ]
       }
     }

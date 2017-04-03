@@ -9,7 +9,9 @@ An OMS Solution that helps you manage Hyper-V replica. It give you visibility of
 
 **Overview Screen**
 
-![Hyper-V Replica OMS Solution](images/hypervReplicaOMSOverview.png "Hyper-V Replica OMS Solution Overview")
+![Hyper-V Replica OMS Solution](images/hypervReplicaOMSOverview01.png "Hyper-V Replica OMS Solution Overview")
+
+![Hyper-V Replica OMS Solution](images/hypervReplicaOMSOverview02.png "Hyper-V Replica OMS Solution Overview")
 
 **Tile Screen**
 
@@ -43,6 +45,12 @@ An OMS Solution that helps you manage Hyper-V replica. It give you visibility of
 ![Hyper-V Replica OMS Solution](images/hypervReplicaOMSLinkSchedule.png "Azure Automation Linking Schedule")
 
 ## Versions
+
+### 1.0.1.0
+* Release adding the following support:
+    * Hosts Being Monitored.
+    * Average replication sizes.
+
 ### 1.0.0.0
 * Initial release with the following support:
     * VMs at each status.
