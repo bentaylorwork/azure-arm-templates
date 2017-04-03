@@ -9,9 +9,9 @@ An OMS Solution that helps you manage Hyper-V replica. It give you visibility of
 
 **Overview Screen**
 
-![Hyper-V Replica OMS Solution](images/hypervReplicaOMSOverview01.png "Hyper-V Replica OMS Solution Overview")
+![Hyper-V Replica OMS Solution](images/hypervReplicaOMSOverview01.PNG "Hyper-V Replica OMS Solution Overview")
 
-![Hyper-V Replica OMS Solution](images/hypervReplicaOMSOverview02.png "Hyper-V Replica OMS Solution Overview")
+![Hyper-V Replica OMS Solution](images/hypervReplicaOMSOverview02.PNG "Hyper-V Replica OMS Solution Overview")
 
 **Tile Screen**
 
