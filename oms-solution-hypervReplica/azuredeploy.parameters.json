@@ -5,8 +5,17 @@
     "workspaceName": {
       "value": ""
     },
+    "workspaceRegionId": {
+      "value": "West Europe"
+    },
     "accountName": {
       "value": ""
+    },
+    "regionId": {
+      "value": "West Europe"
+    },
+    "pricingTier": {
+      "value": "Free"
     },
     "onPremisesRunAsUserName": {
       "value": ""

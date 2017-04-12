@@ -1,6 +1,6 @@
 ﻿{
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.1.0",
+  "contentVersion": "1.0.0.0",
   "parameters": {
     "workspaceName": {
       "type": "string",
@@ -107,7 +107,7 @@
       },
       "Module": {
         "OMSDataInjection": {
-          "name": "OMSDataInjection",
+          "name": "OMSDataInjectionModule",
           "description": "This runbook publishes Hyper-V replica statistics to OMS."
         }
       },
@@ -535,7 +535,7 @@
             "logVerbose": "false",
             "description": "[variables('automation').Runbook.PublishOmsHyperVReplica.description]",
             "publishContentLink": {
-              "uri": "[concat(variables('baseURI'), 'assets/runBooks/', variables('automation').Runbook.PublishOmsHyperVReplica.name, '.ps1') ]",
+              "uri": "[concat(variables('baseURI'), 'scripts/', variables('automation').Runbook.PublishOmsHyperVReplica.name, '.ps1') ]",
               "version": "1.0.0.0"
             }
           }
@@ -582,7 +582,7 @@
           "tags": {},
           "properties": {
             "contentLink": {
-              "uri": "[concat(variables('baseURI'), 'assets/modules/', variables('automation').Module.OMSDataInjection.name, '.zip') ]"
+              "uri": "[concat(variables('baseURI'), 'assets/', variables('automation').Module.OMSDataInjection.name, '.zip') ]"
             }
           }
         },
