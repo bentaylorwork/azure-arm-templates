@@ -107,7 +107,7 @@
       },
       "Module": {
         "OMSDataInjection": {
-          "name": "OMSDataInjectionModule",
+          "name": "OMSDataInjection",
           "description": "This runbook publishes Hyper-V replica statistics to OMS."
         }
       },
