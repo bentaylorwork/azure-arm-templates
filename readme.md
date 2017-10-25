@@ -5,6 +5,6 @@ A collection of Azure ARM templates.
 
 ## Contact
 
-- **ben@redgiantcomputers.com**
+- **ben@bentaylor.work**
 - **http://www.bentaylor.work**
 - **https://twitter.com/bentaylorwork**
