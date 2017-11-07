@@ -103,6 +103,11 @@
     "variables": {
         "resourcePrefix": "[parameters('resourcePrefix')]",
         "availabilitySetName": "[concat(variables('resourcePrefix'), '-avs')]",
+        "networkInterfaceName": "[concat(variables('resourcePrefix'), '-nic')]",
+        "artifacts": {
+            "location": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/disk-management-selection",
+            "sas": ""
+        },
         "vm": {
             "name": "[concat(variables('resourcePrefix'), '-vm')]",
             "os": "2016-Datacenter",
@@ -130,8 +135,7 @@
         "publicIP": {
             "addressName": "[concat(variables('resourcePrefix'), '-pip')]",
             "addressType": "[parameters('publicIPAddressType')]"
-        },
-        "networkInterfaceName": "[concat(variables('resourcePrefix'), '-nic')]"
+        }
     },
     "resources": [
         {
@@ -409,7 +413,29 @@
                     ]
                 }
             },
-            "resources": []
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "CreateStorageSpace",
+                    "apiVersion": "2015-06-15",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', concat(variables('vm').name, '-um'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.19",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/CreateStorageSpace.zip', variables('artifacts').sas)]",
+                            "ConfigurationFunction": "CreateStorageSpace.ps1\\CreateStorageSpace",
+                            "Properties": {}
+                        },
+                        "protectedSettings": {}
+                    }
+                }
+            ]
         },
         {
             "condition": "[equals(parameters('diskType'),'managed')]",
@@ -471,7 +497,29 @@
                     ]
                 }
             },
-            "resources": []
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "CreateStorageSpace",
+                    "apiVersion": "2015-06-15",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', concat(variables('vm').name, '-m'))]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.19",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/CreateStorageSpace.zip', variables('artifacts').sas)]",
+                            "ConfigurationFunction": "CreateStorageSpace.ps1\\CreateStorageSpace",
+                            "Properties": {}
+                        },
+                        "protectedSettings": {}
+                    }
+                }
+            ]
         }
     ],
     "outputs": {

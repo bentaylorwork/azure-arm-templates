@@ -1,7 +1,7 @@
 {
     "itemDisplayName": "disk-management-selection",
-    "description": "Allows selection of managed or unmanaged disk.",
-    "summary": "A template that allows the selection of the underlying storage using conditions.",
+    "description": "Allows selection of managed or unmanaged disk. It will configure the storage within the VM also.",
+    "summary": "A template that allows the selection of the underlying storage using conditions. Once the VM has been deployed it will configure the disks within the VM using Storage Spaces.",
     "dateUpdated": "2017-10-04",
     "location": "westeurope",
     "integrationtests": {
