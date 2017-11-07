@@ -415,6 +415,7 @@
             },
             "resources": [
                 {
+                    "condition": "[equals(parameters('diskType'),'unmanaged')]",
                     "type": "extensions",
                     "name": "CreateStorageSpace",
                     "apiVersion": "2015-06-15",
@@ -428,7 +429,7 @@
                         "typeHandlerVersion": "2.19",
                         "autoUpgradeMinorVersion": true,
                         "settings": {
-                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/CreateStorageSpace.zip', variables('artifacts').sas)]",
+                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/createStorageSpace.zip', variables('artifacts').sas)]",
                             "ConfigurationFunction": "CreateStorageSpace.ps1\\CreateStorageSpace",
                             "Properties": {}
                         },
@@ -499,6 +500,7 @@
             },
             "resources": [
                 {
+                    "condition": "[equals(parameters('diskType'),'managed')]",
                     "type": "extensions",
                     "name": "CreateStorageSpace",
                     "apiVersion": "2015-06-15",
