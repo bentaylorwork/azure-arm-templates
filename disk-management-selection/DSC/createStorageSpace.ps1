@@ -37,7 +37,7 @@ Configuration CreateStorageSpace
            
             SetScript = { 
                 $PhysicalDisks = Get-PhysicalDisk -CanPool $True
-                New-StoragePool -FriendlyName ($USING:diskPrefix + '-Pool') -PhysicalDisks $PhysicalDisks –StorageSubsystemFriendlyName *Storage* |
+                New-StoragePool -FriendlyName ($USING:diskPrefix + '-Pool') -PhysicalDisks $PhysicalDisks -StorageSubsystemFriendlyName *Storage* |
                 New-VirtualDisk -FriendlyName ($USING:diskPrefix + '-Disk') -UseMaximumSize -NumberOfColumns $PhysicalDisks.Count -ResiliencySettingName 'Simple' -ProvisioningType Fixed -Interleave 65536 |
                 Initialize-Disk -Confirm:$False -PassThru |
                 New-Partition -UseMaximumSize -DriveLetter $USING:driveLetter |
