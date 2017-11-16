@@ -29,15 +29,15 @@ Describe "Azure RM Template Disk Selection Tests" {
 
     Context "Does Template Deploy Correctly" {
         It "Based on the JSON output" {
-            $rawResponse = Test-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateURI $TemplateURI -TemplateParameterObject $parameterHash -ErrorAction Stop 5>&1
+            $rawResponse = Test-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateURI $TemplateURI -TemplateParameterObject $templateParameterObject -ErrorAction Stop 5>&1
             $deploymentOutput = ($rawResponse.Item(32) -split 'Body:' | Select-Object -Skip 1 | ConvertFrom-Json).properties
 
             $deploymentOutput.provisioningState | Should Be 'Succeeded'
         }
     }
     Context "Un-Managed Disks" {
-        $parameterHash.diskType = 'unmanaged'
-        $rawResponse = Test-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateURI $TemplateURI -TemplateParameterObject $parameterHash -ErrorAction Stop 5>&1
+        $templateParameterObject.diskType = 'unmanaged'
+        $rawResponse = Test-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateURI $TemplateURI -TemplateParameterObject $templateParameterObject -ErrorAction Stop 5>&1
         $deploymentOutput = ($rawResponse.Item(32) -split 'Body:' | Select-Object -Skip 1 | ConvertFrom-Json).properties
 
         It "Does VM Have The Correct URI" {
@@ -55,8 +55,8 @@ Describe "Azure RM Template Disk Selection Tests" {
         }
     }
     Context "Managed Disks" {
-        $parameterHash.diskType = 'managed'
-        $rawResponse = Test-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateURI $TemplateURI -TemplateParameterObject $parameterHash -ErrorAction Stop 5>&1
+        $templateParameterObject.diskType = 'managed'
+        $rawResponse = Test-AzureRmResourceGroupDeployment -ResourceGroupName $resourceGroupName -TemplateURI $TemplateURI -TemplateParameterObject $templateParameterObject -ErrorAction Stop 5>&1
         $deploymentOutput = ($rawResponse.Item(32) -split 'Body:' | Select-Object -Skip 1 | ConvertFrom-Json).properties
 
         It "Does VM Have The Correct URI" {
