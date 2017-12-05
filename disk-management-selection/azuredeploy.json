@@ -119,14 +119,47 @@
             "os": "2016-Datacenter",
             "imageOffer": "WindowsServer",
             "imagePublisher": "MicrosoftWindowsServer",
-            "adminUserName": "[parameters('adminUserName')]"
+            "adminUserName": "[parameters('adminUserName')]",
+            "storageUnmanaged": {
+                "vhd": {
+                    "uri": "[concat('http://', variables('storage').accountName, '.blob.core.windows.net/vhds/', 'osdisk', '.vhd')]"
+                },
+                "copy": [
+                    {
+                        "name": "dataDisks",
+                        "count": "[int(parameters('numDataDisks'))]",
+                        "input": {
+                            "name": "[concat('datadisk', copyIndex('dataDisks'))]",
+                            "lun": "[copyIndex('dataDisks')]",
+                            "createOption": "Empty",
+                            "diskSizeGB": "1023",
+                            "createOption": "Empty",
+                            "vhd": {
+                                "uri": "[concat('http://vhdstorage', uniqueString(resourceGroup().id), '.blob.core.windows.net/vhds/', 'datadisk', copyIndex('dataDisks'), '.vhd')]"
+                            }
+                        }
+                    }
+                ]
+            },
+            "storageManaged": {
+                "copy": [
+                    {
+                        "name": "dataDisks",
+                        "count": "[int(parameters('numDataDisks'))]",
+                        "input": {
+                            "name": "[concat('datadisk', copyIndex('dataDisks'))]",
+                            "lun": "[copyIndex('dataDisks')]",
+                            "createOption": "Empty",
+                            "diskSizeGB": "1023",
+                            "createOption": "Empty"
+                        }
+                    }
+                ]
+            }
         },
         "storage": {
             "accountName": "[concat('vhdstorage', uniqueString(resourceGroup().id))]",
-            "vhdType": "Standard_LRS",
-            "vhdCachingType": "ReadWrite",
-            "numDataDisks": "[int(parameters('numDataDisks'))]",
-            "sizeDataDisks": "1023"
+            "accountType": "Standard_LRS"
         },
         "loadBalancer": {
             "name": "[concat(variables('resourcePrefix'), '-lb')]"
@@ -167,7 +200,7 @@
             },
             "properties": {},
             "sku": {
-                "name": "[variables('storage').vhdType]"
+                "name": "[variables('storage').accountType]"
             },
             "kind": "Storage"
         },
@@ -314,7 +347,7 @@
                     {
                         "properties": {
                             "publicIPAddress": {
-                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIP').addressname)]"
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIP').addressName)]"
                             }
                         },
                         "name": "LoadBalancerFrontend"
@@ -354,10 +387,9 @@
             }
         },
         {
-            "condition": "[equals(parameters('diskType'),'unmanaged')]",
             "apiVersion": "2017-03-30",
             "type": "Microsoft.Compute/virtualMachines",
-            "name": "[concat(variables('vm').name, '-um')]",
+            "name": "[concat(variables('vm').name)]",
             "location": "[resourceGroup().location]",
             "tags": {
                 "displayName": "VirtualMachines"
@@ -388,28 +420,11 @@
                     },
                     "osDisk": {
                         "name": "osdisk",
-                        "vhd": {
-                            "uri": "[concat('http://', variables('storage').accountName, '.blob.core.windows.net/vhds/', 'osdisk', '.vhd')]"
-                        },
+                        "vhd": "[if(equals(parameters('diskType'), 'unmanaged'), variables('vm').storageUnmanaged.vhd, json('null'))]",
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
                     },
-                    "copy": [
-                        {
-                            "name": "dataDisks",
-                            "count": "[variables('storage').numDataDisks]",
-                            "input": {
-                                "caching": "[variables('storage').vhdCachingType]",
-                                "diskSizeGB": "[variables('storage').sizeDataDisks]",
-                                "lun": "[copyIndex('dataDisks')]",
-                                "name": "[concat(variables('vm').name, '-datadisk', copyIndex('dataDisks'))]",
-                                "vhd": {
-                                    "uri": "[concat('http://', variables('storage').accountName, '.blob.core.windows.net/vhds/', variables('vm').name, '-datadisk', copyIndex('dataDisks'), '.vhd')]"
-                                },
-                                "createOption": "Empty"
-                            }
-                        }
-                    ]
+                    "dataDisks": "[if(equals(parameters('diskType'), 'unmanaged'), variables('vm').storageUnmanaged.dataDisks, variables('vm').storageManaged.dataDisks)]"
                 },
                 "networkProfile": {
                     "networkInterfaces": [
@@ -421,98 +436,12 @@
             },
             "resources": [
                 {
-                    "condition": "[equals(parameters('diskType'),'unmanaged')]",
                     "type": "extensions",
                     "name": "CreateStorageSpace",
                     "apiVersion": "2015-06-15",
                     "location": "[resourceGroup().location]",
                     "dependsOn": [
-                        "[resourceId('Microsoft.Compute/virtualMachines', concat(variables('vm').name, '-um'))]"
-                    ],
-                    "properties": {
-                        "publisher": "Microsoft.Powershell",
-                        "type": "DSC",
-                        "typeHandlerVersion": "2.19",
-                        "autoUpgradeMinorVersion": true,
-                        "settings": {
-                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/createStorageSpace.zip', variables('artifacts').sas)]",
-                            "ConfigurationFunction": "CreateStorageSpace.ps1\\CreateStorageSpace",
-                            "Properties": {}
-                        },
-                        "protectedSettings": {}
-                    }
-                }
-            ]
-        },
-        {
-            "condition": "[equals(parameters('diskType'),'managed')]",
-            "apiVersion": "2017-03-30",
-            "type": "Microsoft.Compute/virtualMachines",
-            "name": "[concat(variables('vm').name, '-m')]",
-            "location": "[resourceGroup().location]",
-            "tags": {
-                "displayName": "VirtualMachines"
-            },
-            "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').accountName)]",
-                "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]",
-                "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
-            ],
-            "properties": {
-                "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
-                },
-                "hardwareProfile": {
-                    "vmSize": "[parameters('vmSize')]"
-                },
-                "osProfile": {
-                    "computerName": "[variables('vm').name]",
-                    "adminUsername": "[variables('vm').adminUserName]",
-                    "adminPassword": "[parameters('adminPassword')]"
-                },
-                "storageProfile": {
-                    "imageReference": {
-                        "publisher": "[variables('vm').imagePublisher]",
-                        "offer": "[variables('vm').imageOffer]",
-                        "sku": "[variables('vm').os]",
-                        "version": "latest"
-                    },
-                    "osDisk": {
-                        "name": "osdisk",
-                        "caching": "ReadWrite",
-                        "createOption": "FromImage"
-                    },
-                    "copy": [
-                        {
-                            "name": "dataDisks",
-                            "count": "[variables('storage').numDataDisks]",
-                            "input": {
-                                "caching": "[variables('storage').vhdCachingType]",
-                                "diskSizeGB": "[variables('storage').sizeDataDisks]",
-                                "lun": "[copyIndex('dataDisks')]",
-                                "name": "[concat(variables('vm').name, '-datadisk', copyIndex('dataDisks'))]",
-                                "createOption": "Empty"
-                            }
-                        }
-                    ]
-                },
-                "networkProfile": {
-                    "networkInterfaces": [
-                        {
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
-                        }
-                    ]
-                }
-            },
-            "resources": [
-                {
-                    "condition": "[equals(parameters('diskType'),'managed')]",
-                    "type": "extensions",
-                    "name": "CreateStorageSpace",
-                    "apiVersion": "2015-06-15",
-                    "location": "[resourceGroup().location]",
-                    "dependsOn": [
-                        "[resourceId('Microsoft.Compute/virtualMachines', concat(variables('vm').name, '-m'))]"
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vm').name)]"
                     ],
                     "properties": {
                         "publisher": "Microsoft.Powershell",
