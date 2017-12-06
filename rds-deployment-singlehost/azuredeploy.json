@@ -1,0 +1,584 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "resourcePrefix": {
+            "type": "string",
+            "defaultValue": "test",
+            "minLength": 1,
+            "metadata": {
+                "description": "General: A string to prefix all resources with."
+            }
+        },
+        "adminUserName": {
+            "type": "string",
+            "defaultValue": "azureadmin",
+            "metadata": {
+                "description": "administrator user name for the VMs."
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "administrator user password for the VMs."
+            }
+        },
+        "adDomainName": {
+            "type": "string",
+            "defaultValue": "company.cloud",
+            "metadata": {
+                "description": "Domain name FQDN for the active directory."
+            }
+        }
+    },
+    "variables": {
+        "resourcePrefix": "[parameters('resourcePrefix')]",
+        "availabilitySetName": {
+            "activeDirectory": "[concat(variables('resourcePrefix'), '-avs-ad')]",
+            "rds": "[concat(variables('resourcePrefix'), '-avs-rds')]"
+        },
+        "artifacts": {
+            "location": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/rds-deployment-singlehost",
+            "sas": ""
+        },
+        "storage": {
+            "vhd": {
+                "accountName": "[concat('vhdstorage', uniqueString(resourceGroup().id))]",
+                "storageType": "Standard_LRS"
+            },
+            "diagnostics" : {
+                "accountName": "[concat('diagnostics', uniqueString(resourceGroup().id))]",
+                "storageType": "Standard_LRS"
+            }
+        },
+        "vm": {
+            "activeDirectory": {
+                "name": "[concat(variables('resourcePrefix'), '-vm-ad')]",
+                "os": "2016-Datacenter",
+                "size": "Standard_B2ms",
+                "imageOffer": "WindowsServer",
+                "imagePublisher": "MicrosoftWindowsServer",
+                "adminUserName": "[parameters('adminUserName')]",
+                "availabilitySet": "[concat(variables('resourcePrefix'), '-avs-ad')]",
+                "storage": {
+                    "dataDiskNumber": 4,
+                    "dataDiskCaching": "None",
+                    "dataDiskSize": "1023"
+                }
+            },
+            "rds": {
+                "name": "[concat(variables('resourcePrefix'), '-vm-rds')]",
+                "os": "2016-Datacenter",
+                "size": "Standard_B2ms",
+                "imageOffer": "WindowsServer",
+                "imagePublisher": "MicrosoftWindowsServer",
+                "adminUserName": "[parameters('adminUserName')]",
+                "availabilitySet": "[concat(variables('resourcePrefix'), '-avs-rds')]",
+                "storage": {
+                    "dataDiskNumber": 4,
+                    "dataDiskCaching": "ReadWrite",
+                    "dataDiskSize": "1023"
+                }
+            }
+        },
+        "virtualNetwork": {
+            "name": "[concat(variables('resourcePrefix'), '-vnet')]",
+            "addressSpace": "10.0.0.0/22",
+            "dnsServer": "10.0.0.8",
+            "activeDirectorySubnet": {
+                "name": "[concat(variables('resourcePrefix'), '-subnet-ad')]",
+                "networkSecurityGroupName": "[concat(variables('resourcePrefix'), '-nsg-ad')]",
+                "ipScheme": "10.0.0.0/24"
+            },
+            "rdsSubnet": {
+                "name": "[concat(variables('resourcePrefix'), '-subnet-rds')]",
+                "networkSecurityGroupName": "[concat(variables('resourcePrefix'), '-nsg-rds')]",
+                "ipScheme": "10.0.1.0/24"
+            }
+        },
+        "publicIP": {
+            "addressName": "[concat(variables('resourcePrefix'), '-pip')]",
+            "addressType": "Static"
+        },
+        "loadBalancer": {
+            "name": "[concat(variables('resourcePrefix'), '-lb-rds')]"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-06-01",
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storage').vhd.accountName]",
+            "location": "[resourceGroup().location]",
+            "properties": {},
+            "sku": {
+                "name": "[variables('storage').vhd.storageType]"
+            },
+            "kind": "Storage"
+        },
+        {
+            "apiVersion": "2017-06-01",
+            "type": "Microsoft.Storage/storageAccounts",
+            "name": "[variables('storage').diagnostics.accountName]",
+            "location": "[resourceGroup().location]",
+            "properties": {},
+            "sku": {
+                "name": "[variables('storage').diagnostics.storageType]"
+            },
+            "kind": "Storage"
+        },
+        {
+            "apiVersion": "2017-03-30",
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('availabilitySetName').activeDirectory]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "PlatformUpdateDomainCount": 3,
+                "PlatformFaultDomainCount": 2
+            },
+            "sku": {
+                "name": "Classic"
+            }
+        },
+        {
+            "apiVersion": "2017-03-30",
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[variables('availabilitySetName').rds]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "PlatformUpdateDomainCount": 3,
+                "PlatformFaultDomainCount": 2
+            },
+            "sku": {
+                "name": "Classic"
+            }
+        },
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('virtualNetwork').name]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('virtualNetwork').activeDirectorySubnet.networkSecurityGroupName)]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', variables('virtualNetwork').rdsSubnet.networkSecurityGroupName)]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('virtualNetwork').addressSpace]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('virtualNetwork').activeDirectorySubnet.name]",
+                        "properties": {
+                            "addressPrefix": "[variables('virtualNetwork').activeDirectorySubnet.ipScheme]"
+                        }
+                    },
+                    {
+                        "name": "[variables('virtualNetwork').rdsSubnet.name]",
+                        "properties": {
+                            "addressPrefix": "[variables('virtualNetwork').rdsSubnet.ipScheme]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('virtualNetwork').rdsSubnet.networkSecurityGroupName)]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('virtualNetwork').rdsSubnet.networkSecurityGroupName]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "Allow-Inbound-RDP",
+                        "properties": {
+                            "description": "Allow - RDP - From any source",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "Internet",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 500,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('virtualNetwork').activeDirectorySubnet.networkSecurityGroupName]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "securityRules": []
+            }
+        },
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('publicIP').addressName]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "publicIPAllocationMethod": "[variables('publicIP').addressType]"
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[variables('loadBalancer').name]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIP').addressName)]",
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetwork').name)]"
+            ],
+            "properties": {
+                "frontendIPConfigurations": [
+                    {
+                        "name": "LoadBalancerFrontend",
+                        "properties": {
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIP').addressName)]"
+                            }
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "BackendPool1"
+                    }
+                ],
+                "inboundNatRules": [
+                    {
+                        "name": "Inbound-RDP",
+                        "properties": {
+                            "backendPort": 3389,
+                            "enableFloatingIP": false,
+                            "frontendIPConfiguration": {
+                                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer').name), '/frontendIPConfigurations/LoadBalancerFrontend')]"
+                            },
+                            "frontendPort": 3389,
+                            "protocol": "tcp"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(variables('resourcePrefix'), '-nic-ad')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetwork').name)]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat(variables('resourcePrefix'), '-ip-ad')]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Static",
+                            "privateIPAddress": "[variables('virtualNetwork').dnsServer]",
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetwork').name), '/subnets/', variables('virtualNetwork').activeDirectorySubnet.name)]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-03-30",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('vm').activeDirectory.name]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').vhd.accountName)]",
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('resourcePrefix'), '-nic-ad'))]",
+                "[resourceId('Microsoft.Compute/availabilitySets', variables('vm').activeDirectory.availabilitySet)]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').diagnostics.accountName)]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('vm').activeDirectory.availabilitySet)]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[variables('vm').activeDirectory.size]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('vm').activeDirectory.name]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('vm').activeDirectory.imagePublisher]",
+                        "offer": "[variables('vm').activeDirectory.imageOffer]",
+                        "sku": "[variables('vm').activeDirectory.os]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('vm').activeDirectory.name, '-osdisk.vhd')]",
+                        "vhd": {
+                            "uri": "[concat(reference(variables('storage').vhd.accountName, '2017-06-01').primaryEndpoints.blob, 'vhds/', variables('vm').activeDirectory.name, '-osdisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    },
+                    "copy": [
+                        {
+                            "name": "dataDisks",
+                            "count": "[variables('vm').activeDirectory.storage.dataDiskNumber]",
+                            "input": {
+                                "caching": "[variables('vm').activeDirectory.storage.dataDiskCaching]",
+                                "diskSizeGB": "[variables('vm').activeDirectory.storage.dataDiskSize]",
+                                "lun": "[copyIndex('dataDisks')]",
+                                "name": "[concat(variables('vm').activeDirectory.name, '-datadisk-', copyIndex('dataDisks'))]",
+                                "vhd": {
+                                    "uri": "[concat(reference(variables('storage').vhd.accountName, '2017-06-01').primaryEndpoints.blob, 'vhds/', variables('vm').activeDirectory.name, '-datadisk-', copyIndex('dataDisks'), '.vhd')]"
+                                },
+                                "createOption": "Empty"
+                            }
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('resourcePrefix'), '-nic-ad'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                      "enabled": true,
+                      "storageUri": "[reference(variables('storage').diagnostics.accountName, '2017-06-01').primaryEndpoints.blob]"
+                    }
+                }
+            },
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "createadforest",
+                    "apiVersion": "2016-03-30",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines',variables('vm').activeDirectory.name)]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.19",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/Configuration.zip', variables('artifacts').sas)]",
+                            "ConfigurationFunction": "VMad.ps1\\VMad",
+                            "Properties": {
+                                "DomainName": "[parameters('adDomainName')]",
+                                "AdminCreds": {
+                                    "UserName": "[parameters('adminUsername')]",
+                                    "Password": "PrivateSettingsRef:AdminPassword"
+                                }
+                            }
+                        },
+                        "protectedSettings": {
+                            "Items": {
+                                "AdminPassword": "[parameters('adminPassword')]"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "apiVersion": "2015-01-01",
+            "type": "Microsoft.Resources/deployments",
+            "name": "updateDnsServerOnVnet",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('vm').activeDirectory.name,'/extensions/createadforest')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/update-vnet-with-dns-server/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetwork": {
+                        "value": "[variables('virtualNetwork')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[concat(variables('resourcePrefix'), '-nic-rds')]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetwork').name)]",
+                "[resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer').name)]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "[concat(variables('resourcePrefix'), '-ip-rds')]",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetwork').name), '/subnets/', variables('virtualNetwork').rdsSubnet.name)]"
+                            },
+                            "loadBalancerBackendAddressPools": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer').name), '/backendAddressPools/BackendPool1')]"
+                                }
+                            ],
+                            "loadBalancerInboundNatRules": [
+                                {
+                                    "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('loadBalancer').name), '/inboundNatRules/Inbound-RDP')]"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-03-30",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[variables('vm').rds.name]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', variables('vm').activeDirectory.name)]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').vhd.accountName)]",
+                "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('resourcePrefix'), '-nic-rds'))]",
+                "[resourceId('Microsoft.Compute/availabilitySets', variables('vm').rds.availabilitySet)]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').diagnostics.accountName)]",
+                "[resourceId('Microsoft.Resources/deployments', 'updateDnsServerOnVnet')]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('vm').rds.availabilitySet)]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[variables('vm').rds.size]"
+                },
+                "osProfile": {
+                    "computername": "[variables('vm').rds.name]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('vm').rds.imagePublisher]",
+                        "offer": "[variables('vm').rds.imageOffer]",
+                        "sku": "[variables('vm').rds.os]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "osdisk",
+                        "vhd": {
+                            "uri": "[concat(reference(variables('storage').vhd.accountName, '2016-01-01').primaryEndpoints.blob, 'vhds/', variables('vm').rds.name, '-osdisk.vhd')]"
+                        },
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    },
+                    "copy": [
+                        {
+                            "name": "dataDisks",
+                            "count": "[variables('vm').rds.storage.dataDiskNumber]",
+                            "input": {
+                                "caching": "[variables('vm').rds.storage.dataDiskCaching]",
+                                "diskSizeGB": "[variables('vm').activeDirectory.storage.dataDiskSize]",
+                                "lun": "[copyIndex('dataDisks')]",
+                                "name": "[concat(variables('vm').rds.name, '-datadisk-', copyIndex('dataDisks'))]",
+                                "vhd": {
+                                    "uri": "[concat(reference(variables('storage').vhd.accountName, '2016-01-01').primaryEndpoints.blob, 'vhds/', variables('vm').rds.name, '-datadisk-', copyIndex('dataDisks'), '.vhd')]"
+                                },
+                                "createOption": "Empty"
+                            }
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('resourcePrefix'), '-nic-rds'))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                      "enabled": true,
+                      "storageUri": "[reference(variables('storage').diagnostics.accountName, '2017-06-01').primaryEndpoints.blob]"
+                    }
+                }
+            },
+            "resources": [
+                {
+                    "apiVersion": "2015-06-15",
+                    "type": "extensions",
+                    "name": "joindomain",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vm').rds.name)]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Compute",
+                        "type": "JsonADDomainExtension",
+                        "typeHandlerVersion": "1.3",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "Name": "[parameters('adDomainName')]",
+                            "User": "[concat(parameters('adDomainName'), '\\', parameters('adminUserName'))]",
+                            "Restart": "true",
+                            "Options": "3",
+                            "OUPath": ""
+                        },
+                        "protectedsettings": {
+                            "Password": "[parameters('adminPassword')]"
+                        }
+                    }
+                },
+                {
+                    "type": "extensions",
+                    "name": "rdsDSC",
+                    "apiVersion": "2016-03-30",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vm').rds.name)]",
+                        "[concat('Microsoft.Compute/virtualMachines/', variables('vm').rds.name, '/extensions/joindomain')]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.9",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/Configuration.zip', variables('artifacts').sas)]",
+                            "ConfigurationFunction": "VMrds.ps1\\VMrds",
+                            "Properties": {
+                                "DomainName": "[parameters('adDomainName')]",
+                                "AdminCreds": {
+                                    "UserName": "[parameters('adminUsername')]",
+                                    "Password": "PrivateSettingsRef:AdminPassword"
+                                }
+                            }
+                        },
+                        "protectedSettings": {
+                            "Items": {
+                                "AdminPassword": "[parameters('adminPassword')]"
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}
