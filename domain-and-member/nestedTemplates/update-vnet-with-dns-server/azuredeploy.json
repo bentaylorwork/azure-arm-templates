@@ -1,0 +1,50 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "virtualNetwork": {
+            "type": "object"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('virtualNetwork').name]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "VirtualNetwork"
+            },
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('virtualNetwork').addressSpace]"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": [
+                        "[parameters('virtualNetwork').dnsServer]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('virtualNetwork').activeDirectorySubnet.name]",
+                        "properties": {
+                            "addressPrefix": "[parameters('virtualNetwork').activeDirectorySubnet.ipScheme]"
+                        }
+                    },
+                    {
+                        "name": "[parameters('virtualNetwork').rdsSubnet.name]",
+                        "properties": {
+                            "addressPrefix": "[parameters('virtualNetwork').rdsSubnet.ipScheme]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('virtualNetwork').rdsSubnet.networkSecurityGroupName)]"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
