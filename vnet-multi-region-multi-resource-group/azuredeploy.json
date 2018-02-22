@@ -1,0 +1,168 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "sharedKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Shared key for IPSec tunnel"
+            }
+        }
+    },
+    "variables": {
+        "location": {
+            "weu": {
+                "resourceGroup": "rg-weu",
+                "vpnGatewayName": "weu-vpn-gw",
+                "virtualNetwork": {
+                    "name": "weu-vnet",
+                    "addressSpace": "10.0.0.0/22",
+                    "subnets": {
+                        "gateway": {
+                            "name": "GatewaySubnet",
+                            "ipScheme": "10.0.0.0/24"
+                        },
+                        "default": {
+                            "name": "default",
+                            "ipScheme": "10.0.1.0/24"
+                        }
+                    }
+                }
+            },
+            "eus": {
+                "resourceGroup": "rg-eus",
+                "vpnGatewayName": "eus-vpn-gw",
+                "virtualNetwork": {
+                    "name": "eus-vnet",
+                    "addressSpace": "10.1.0.0/22",
+                    "subnets": {
+                        "gateway": {
+                            "name": "GatewaySubnet",
+                            "ipScheme": "10.1.0.0/24"
+                        },
+                        "default": {
+                            "name": "default",
+                            "ipScheme": "10.1.1.0/24"
+                        }
+                    }
+                }
+            }
+        },
+        "artifacts": {
+            "location": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/vnet-multi-region-multi-resource-group",
+            "sas": ""
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "weu-vpn-vnet-deployment",
+            "resourceGroup": "[variables('location').weu.resourceGroup]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet-vpn-gw/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "vpnGatewayName": {
+                        "value": "[variables('location').weu.vpnGatewayName]"
+                    },
+                    "virtualNetwork": {
+                        "value": "[variables('location').weu.virtualNetwork]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "eus-vpn-vnet-deployment",
+            "resourceGroup": "[variables('location').eus.resourceGroup]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet-vpn-gw/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "vpnGatewayName": {
+                        "value": "[variables('location').eus.vpnGatewayName]"
+                    },
+                    "virtualNetwork": {
+                        "value": "[variables('location').eus.virtualNetwork]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "eus-weu-connection-deployment",
+            "resourceGroup": "[variables('location').eus.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').weu.resourceGroup, 'Microsoft.Resources/deployments', 'weu-vpn-vnet-deployment')]",
+                "[resourceId(variables('location').eus.resourceGroup, 'Microsoft.Resources/deployments', 'eus-vpn-vnet-deployment')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vpn-connection/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "connectionName": {
+                        "value": "eus-weu-connection"
+                    },
+                    "remoteResourceGroupName": {
+                        "value": "[variables('location').weu.resourceGroup]"
+                    },
+                    "localVpnGatewayName": {
+                        "value": "[variables('location').eus.vpnGatewayName]"
+                    },
+                    "remoteVpnGatewayName": {
+                        "value": "[variables('location').weu.vpnGatewayName]"
+                    },
+                    "SharedKey": {
+                        "value": "[parameters('sharedKey')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "weu-eus-connection-deployment",
+            "resourceGroup": "[variables('location').weu.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').weu.resourceGroup, 'Microsoft.Resources/deployments', 'weu-vpn-vnet-deployment')]",
+                "[resourceId(variables('location').eus.resourceGroup, 'Microsoft.Resources/deployments', 'eus-vpn-vnet-deployment')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vpn-connection/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "connectionName": {
+                        "value": "weu-eus-connection"
+                    },
+                    "remoteResourceGroupName": {
+                        "value": "[variables('location').eus.resourceGroup]"
+                    },
+                    "localVpnGatewayName": {
+                        "value": "[variables('location').weu.vpnGatewayName]"
+                    },
+                    "remoteVpnGatewayName": {
+                        "value": "[variables('location').eus.vpnGatewayName]"
+                    },
+                    "SharedKey": {
+                        "value": "[parameters('sharedKey')]"
+                    }
+                }
+            }
+        }
+    ]
+}
