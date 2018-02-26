@@ -1,7 +1,7 @@
 # A Global Hub and Spoke Network Topology
 
 [![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbentaylorwork%2Fazure-arm-templates%2Fmaster%2Fvnet-hub-spoke-multi-region-multi-resource-group%2Fazuredeploy.json)
-[![Deploy to Azure](http://armviz.io/visualizebutton.png)](https://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fbentaylorwork%2Fazure-arm-templates%2Fmaster%2Fvnet-hub-spoke-multi-region-multi-resource-group%2Fazuredeploy.json)
+[![Deploy to Azure](http://armviz.io/visualizebutton.png)](http://armviz.io/#/?load=https%3A%2F%2Fraw.githubusercontent.com%2Fbentaylorwork%2Fazure-arm-templates%2Fmaster%2Fvnet-hub-spoke-multi-region-multi-resource-group%2Fazuredeploy.json)
 
 ## Overview
 This template deploys a hub and spoke network into two separate Resource Groups which can be in different regions. The two hub networks are connected via VPN gateways.
