@@ -1,0 +1,462 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "resourceGroupNameOne": {
+            "type": "string",
+            "metadata": {
+                "description": "Resource Group Name One"
+            }
+        },
+        "resourceGroupNameTwo": {
+            "type": "string",
+            "metadata": {
+                "description": "Resource Group Name Two"
+            }
+        },
+        "sharedKey": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Shared key for the IPSec tunnels"
+            }
+        }
+    },
+    "variables": {
+        "location": {
+            "locationOne": {
+                "resourceGroup": "[parameters('resourceGroupNameOne')]",
+                "vpnGatewayName": "vpn-gw",
+                "virtualNetwork": {
+                    "hub":{
+                        "name": "vnet-hub",
+                        "addressSpace": "10.0.0.0/22",
+                        "vpnGatewaySubnetName": "GatewaySubnet",
+                        "subnets": [
+                            {
+                                "name": "GatewaySubnet",
+                                "ipScheme": "10.0.0.0/24"
+                            },
+                            {
+                                "name": "default",
+                                "ipScheme": "10.0.1.0/24"
+                            }
+                        ]
+                    },
+                    "spoke": [
+                        {
+                            "name": "vnet-spoke-01",
+                            "addressSpace": "10.1.0.0/22",
+                            "subnets": [
+                                {
+                                    "name": "default01",
+                                    "ipScheme": "10.1.0.0/24"
+                                },
+                                {
+                                    "name": "default02",
+                                    "ipScheme": "10.1.1.0/24"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "vnet-spoke-02",
+                            "addressSpace": "10.2.0.0/22",
+                            "subnets": [
+                                {
+                                    "name": "default01",
+                                    "ipScheme": "10.2.0.0/24"
+                                },
+                                {
+                                    "name": "default02",
+                                    "ipScheme": "10.2.1.0/24"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            "locationTwo": {
+                "resourceGroup": "[parameters('resourceGroupNameTwo')]",
+                "vpnGatewayName": "vpn-gw",
+                "virtualNetwork": {
+                    "hub":{
+                        "name": "vnet-hub",
+                        "addressSpace": "10.100.0.0/22",
+                        "vpnGatewaySubnetName": "GatewaySubnet",
+                        "subnets": [
+                            {
+                                "name": "GatewaySubnet",
+                                "ipScheme": "10.100.0.0/24"
+                            },
+                            {
+                                "name": "default",
+                                "ipScheme": "10.100.1.0/24"
+                            }
+                        ]
+                    },
+                    "spoke": [
+                        {
+                            "name": "vnet-spoke-01",
+                            "addressSpace": "10.101.0.0/22",
+                            "subnets": [
+                                {
+                                    "name": "default01",
+                                    "ipScheme": "10.101.0.0/24"
+                                },
+                                {
+                                    "name": "default02",
+                                    "ipScheme": "10.101.1.0/24"
+                                }
+                            ]
+                        },
+                        {
+                            "name": "vnet-spoke-02",
+                            "addressSpace": "10.102.0.0/22",
+                            "subnets": [
+                                {
+                                    "name": "default01",
+                                    "ipScheme": "10.102.0.0/24"
+                                },
+                                {
+                                    "name": "default02",
+                                    "ipScheme": "10.102.1.0/24"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        },
+        "artifacts": {
+            "location": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master//vnet-hub-spoke-multi-region-multi-resource-group",
+            "sas": ""
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "locationOne-vnet-hub",
+            "resourceGroup": "[variables('location').locationOne.resourceGroup]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetwork": {
+                        "value": "[variables('location').locationOne.virtualNetwork.hub]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "locationTwo-vnet-hub",
+            "resourceGroup": "[variables('location').locationTwo.resourceGroup]",
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetwork": {
+                        "value": "[variables('location').locationTwo.virtualNetwork.hub]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "locationOne-vpn-gw",
+            "resourceGroup": "[variables('location').locationOne.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationOne.resourceGroup, 'Microsoft.Resources/deployments', 'locationOne-vnet-hub')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vpn-gateway/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "vpnGatewayName": {
+                        "value": "[variables('location').locationOne.vpnGatewayName]"
+                    },
+                    "virtualNetwork": {
+                        "value": "[variables('location').locationOne.virtualNetwork.hub]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "locationTwo-vpn-gw",
+            "resourceGroup": "[variables('location').locationTwo.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationTwo.resourceGroup, 'Microsoft.Resources/deployments', 'locationTwo-vnet-hub')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vpn-gateway/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "vpnGatewayName": {
+                        "value": "[variables('location').locationTwo.vpnGatewayName]"
+                    },
+                    "virtualNetwork": {
+                        "value": "[variables('location').locationTwo.virtualNetwork.hub]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "locationTwo-locationOne-connection-deployment",
+            "resourceGroup": "[variables('location').locationTwo.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationOne.resourceGroup, 'Microsoft.Resources/deployments', 'locationOne-vpn-gw')]",
+                "[resourceId(variables('location').locationTwo.resourceGroup, 'Microsoft.Resources/deployments', 'locationTwo-vpn-gw')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vpn-connection/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "connectionName": {
+                        "value": "connection"
+                    },
+                    "remoteResourceGroupName": {
+                        "value": "[variables('location').locationOne.resourceGroup]"
+                    },
+                    "localVpnGatewayName": {
+                        "value": "[variables('location').locationTwo.vpnGatewayName]"
+                    },
+                    "remoteVpnGatewayName": {
+                        "value": "[variables('location').locationOne.vpnGatewayName]"
+                    },
+                    "SharedKey": {
+                        "value": "[parameters('sharedKey')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "locationOne-locationTwo-connection-deployment",
+            "resourceGroup": "[variables('location').locationOne.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationOne.resourceGroup, 'Microsoft.Resources/deployments', 'locationOne-vpn-gw')]",
+                "[resourceId(variables('location').locationTwo.resourceGroup, 'Microsoft.Resources/deployments', 'locationTwo-vpn-gw')]"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vpn-connection/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "connectionName": {
+                        "value": "connection"
+                    },
+                    "remoteResourceGroupName": {
+                        "value": "[variables('location').locationTwo.resourceGroup]"
+                    },
+                    "localVpnGatewayName": {
+                        "value": "[variables('location').locationOne.vpnGatewayName]"
+                    },
+                    "remoteVpnGatewayName": {
+                        "value": "[variables('location').locationTwo.vpnGatewayName]"
+                    },
+                    "SharedKey": {
+                        "value": "[parameters('sharedKey')]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('locationOneVnetSpoke', copyIndex())]",
+            "copy": {
+                "name": "locationOneSpokeNetwork",
+                "count": "[length(variables('location').locationOne.virtualNetwork.spoke)]"
+             },
+            "resourceGroup": "[variables('location').locationOne.resourceGroup]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetwork": {
+                        "value": "[variables('location').locationOne.virtualNetwork.spoke[copyIndex()]]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('locationTwoVnetSpoke', copyIndex())]",
+            "copy": {
+                "name": "locationTwoSpokeNetwork",
+                "count": "[length(variables('location').locationTwo.virtualNetwork.spoke)]"
+             },
+            "resourceGroup": "[variables('location').locationTwo.resourceGroup]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "virtualNetwork": {
+                        "value": "[variables('location').locationTwo.virtualNetwork.spoke[copyIndex()]]"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('locationOneSpokePeering', copyIndex())]",
+            "copy": {
+                "name": "locationOneSpokePeering",
+                "count": "[length(variables('location').locationOne.virtualNetwork.spoke)]"
+             },
+            "resourceGroup": "[variables('location').locationOne.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationOne.resourceGroup, 'Microsoft.Resources/deployments', 'locationOne-vpn-gw')]",
+                "locationOneSpokeNetwork"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet-peering/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "localVirtualNetworkName": {
+                        "value": "[variables('location').locationOne.virtualNetwork.spoke[copyIndex()].name]"
+                    },
+                    "remoteVirtualNetworkName": {
+                        "value": "[variables('location').locationOne.virtualNetwork.hub.name]"
+                    },
+                    "networkType": {
+                        "value": "spoke"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('locationOneHubPeering', copyIndex())]",
+            "copy": {
+                "name": "locationOneSpokePeering",
+                "count": "[length(variables('location').locationOne.virtualNetwork.spoke)]"
+             },
+            "resourceGroup": "[variables('location').locationOne.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationOne.resourceGroup, 'Microsoft.Resources/deployments', 'locationOne-vnet-hub')]",
+                "locationOneSpokeNetwork"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet-peering/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "localVirtualNetworkName": {
+                        "value": "[variables('location').locationOne.virtualNetwork.hub.name]"
+                    },
+                    "remoteVirtualNetworkName": {
+                        "value": "[variables('location').locationOne.virtualNetwork.spoke[copyIndex()].name]"
+                    },
+                    "networkType": {
+                        "value": "hub"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('locationTwoSpokePeering', copyIndex())]",
+            "copy": {
+                "name": "locationTwoSpokePeering",
+                "count": "[length(variables('location').locationTwo.virtualNetwork.spoke)]"
+             },
+            "resourceGroup": "[variables('location').locationTwo.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationTwo.resourceGroup, 'Microsoft.Resources/deployments', 'locationTwo-vpn-gw')]",
+                "locationTwoSpokeNetwork"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet-peering/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "localVirtualNetworkName": {
+                        "value": "[variables('location').locationTwo.virtualNetwork.spoke[copyIndex()].name]"
+                    },
+                    "remoteVirtualNetworkName": {
+                        "value": "[variables('location').locationTwo.virtualNetwork.hub.name]"
+                    },
+                    "networkType": {
+                        "value": "spoke"
+                    }
+                }
+            }
+        },
+        {
+            "apiVersion": "2017-05-10",
+            "type": "Microsoft.Resources/deployments",
+            "name": "[concat('locationTwoHubPeering', copyIndex())]",
+            "copy": {
+                "name": "locationTwoSpokePeering",
+                "count": "[length(variables('location').locationTwo.virtualNetwork.spoke)]"
+             },
+            "resourceGroup": "[variables('location').locationTwo.resourceGroup]",
+            "dependsOn": [
+                "[resourceId(variables('location').locationTwo.resourceGroup, 'Microsoft.Resources/deployments', 'locationTwo-vnet-hub')]",
+                "locationTwoSpokeNetwork"
+            ],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                    "uri": "[concat(variables('artifacts').location, '/nestedTemplates/vnet-peering/azuredeploy.json', variables('artifacts').sas)]",
+                    "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                    "localVirtualNetworkName": {
+                        "value": "[variables('location').locationTwo.virtualNetwork.hub.name]"
+                    },
+                    "remoteVirtualNetworkName": {
+                        "value": "[variables('location').locationTwo.virtualNetwork.spoke[copyIndex()].name]"
+                    },
+                    "networkType": {
+                        "value": "hub"
+                    }
+                }
+            }
+        }
+    ]
+}

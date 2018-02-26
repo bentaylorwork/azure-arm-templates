@@ -1,0 +1,45 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "connectionName": {
+            "type": "string"
+        },
+        "remoteResourceGroupName": {
+            "type": "string"
+        },
+        "localVpnGatewayName": {
+            "type": "string"
+        },
+        "remoteVpnGatewayName": {
+            "type": "string"
+        },
+        "SharedKey": {
+            "type": "securestring"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "type": "Microsoft.Network/connections",
+            "name": "[parameters('connectionName')]",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "virtualNetworkGateway1": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworkGateways', parameters('localVpnGatewayName'))]"
+                },
+                "virtualNetworkGateway2": {
+                    "id": "[resourceId(parameters('remoteResourceGroupName'), 'Microsoft.Network/virtualNetworkGateways', parameters('remoteVpnGatewayName'))]"
+                },
+                "connectionType": "vnet2vnet",
+                "routingWeight": 0,
+                "enableBgp": false,
+                "usePolicyBasedTrafficSelectors": false,
+                "ipsecPolicies": [],
+                "sharedKey": "[parameters('sharedKey')]"
+            }
+        }
+    ]
+}

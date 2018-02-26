@@ -1,0 +1,72 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vpnGatewayName": {
+            "type": "string"
+        },
+        "virtualNetwork": {
+            "type": "object"
+        }
+    },
+    "variables": {
+        "publicIpName": "[concat('pip-', guid(resourceGroup().id))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "sku": {
+                "name": "Basic"
+            },
+            "name": "[variables('publicIpName')]",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {},
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "name": "[parameters('vpnGatewayName')]",
+            "apiVersion": "2017-10-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "default",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetwork').name , parameters('virtualNetwork').vpnGatewaySubnetName)]"
+                            }
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "VpnGw1",
+                    "tier": "VpnGw1",
+                    "capacity": 2
+                },
+                "gatewayType": "Vpn",
+                "vpnType": "RouteBased",
+                "enableBgp": false,
+                "activeActive": false,
+                "vpnClientConfiguration": {
+                    "vpnClientProtocols": [
+                        "SSTP",
+                        "IkeV2"
+                    ],
+                    "vpnClientRootCertificates": [],
+                    "vpnClientRevokedCertificates": []
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpName'))]"
+            ]
+        }
+    ]
+}

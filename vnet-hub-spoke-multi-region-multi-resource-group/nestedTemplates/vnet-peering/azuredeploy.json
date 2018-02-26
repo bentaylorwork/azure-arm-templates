@@ -1,0 +1,48 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "localVirtualNetworkName": {
+            "type": "string",
+            "metadata": {
+                "description": "Set the local VNet name"
+            }
+        },
+        "remoteVirtualNetworkName": {
+            "type": "string",
+            "metadata": {
+                "description": "Set the remote VNet name"
+            }
+        },
+        "networkType": {
+            "type": "string",
+            "metadata": {
+                "description": "Set if the network is a hub or spoke network"
+            },
+            "allowedValues": [
+                "hub",
+                "spoke"
+            ]
+        }
+    },
+    "variables": {
+        "remoteVirtualNetwork": "[resourceId('Microsoft.Network/virtualNetworks', parameters('remoteVirtualNetworkName'))]"
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-10-01",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "name": "[concat(parameters('localVirtualNetworkName'), '/', parameters('remoteVirtualNetworkName'))]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": "[if(equals(parameters('networkType'), 'hub'), 'true', 'false')]",
+                "useRemoteGateways": "[if(equals(parameters('networkType'), 'hub'), 'false', 'true')]",
+                "remoteVirtualNetwork": {
+                    "id": "[variables('remoteVirtualNetwork')]"
+                }
+            }
+        }
+    ]
+}
