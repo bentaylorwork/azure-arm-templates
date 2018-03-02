@@ -1,0 +1,33 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "serviceName": {
+            "value": "finance-api"
+        },
+        "adminUserName": {
+            "value": "azureadmin"
+        },
+        "vmOsVersion": {
+            "value": "2016-Datacenter"
+        },
+        "vmSize": {
+            "value": "Standard_D1_v2"
+        },
+        "numDataDisks": {
+            "value": "2"
+        },
+        "VSTSAccountName": {
+            "value": "contoso"
+        },
+        "VSTSTeamProject": {
+            "value": "project"
+        },
+        "VSTSDeploymentGroup": {
+            "value": "IIS"
+        },
+        "VSTSTags": {
+            "value": "iis, api"
+        }
+    }
+}
