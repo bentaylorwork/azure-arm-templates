@@ -1,0 +1,378 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "serviceName": {
+            "type": "string",
+            "minLength": 1,
+            "metadata": {
+                "description": "General: A string to prefix all resources with."
+            }
+        },
+        "adminUserName": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 20,
+            "defaultValue": "azureadmin",
+            "metadata": {
+                "description": "VM: Admin UserName"
+            }
+        },
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "VM: Admin password"
+            }
+        },
+        "vmOsVersion": {
+            "type": "string",
+            "defaultValue": "2016-Datacenter",
+            "allowedValues": [
+              "2012-R2-Datacenter",
+              "2016-Datacenter-with-Containers",
+              "2016-Datacenter"
+            ],
+            "metadata": {
+              "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version."
+            }
+        },
+        "vmSize": {
+            "type": "string",
+            "minLength": 1,
+            "allowedValues": [
+                "Basic_A0",
+                "Basic_A1",
+                "Basic_A2",
+                "Basic_A3",
+                "Basic_A4",
+                "Standard_A0",
+                "Standard_A1",
+                "Standard_A2",
+                "Standard_A3",
+                "Standard_A4",
+                "Standard_D1",
+                "Standard_D2",
+                "Standard_D3",
+                "Standard_D4",
+                "Standard_B1s",
+                "Standard_B1ms",
+                "Standard_B2s",
+                "Standard_B2ms",
+                "Standard_B4ms",
+                "Standard_B8ms",
+                "Standard_D1_v2",
+                "Standard_D2_v2",
+                "Standard_D3_v2",
+                "Standard_D4_v2"
+            ],
+            "metadata": {
+                "description": "VM: Size"
+            }
+        },
+        "numDataDisks": {
+            "type": "string",
+            "defaultValue": "2",
+            "allowedValues": [
+                "2",
+                "3",
+                "4",
+                "5",
+                "6",
+                "7",
+                "8",
+                "9",
+                "10",
+                "11",
+                "12",
+                "13",
+                "14",
+                "15",
+                "16"
+            ],
+            "metadata": {
+                "description": "VM: Number of Data Disks"
+            }
+        },
+        "virtualNetworkName": {
+            "type": "string",
+            "metadata": {
+                "description": "VNET Name"
+            }
+        },
+        "virtualNetworkSubnetName": {
+            "type": "string",
+            "metadata": {
+              "description": "Name of the subnet inside the VNET"
+            }
+          },
+        "VSTSAccountName": {
+            "type": "string",
+            "minLength": 1,
+            "metadata": {
+                "description": "The VSTS account to use. Example: If your account URL is https://contoso.visualstudio.com, just specify contoso."
+            }
+        },
+        "VSTSTeamProject": {
+            "type": "string",
+            "minLength": 1,
+            "metadata": {
+                "description": "The Team Project that has the deployment group defined within it."
+            }
+        },
+        "VSTSDeploymentGroup": {
+            "type": "string",
+            "minLength": 1,
+            "metadata": {
+                "description": "The deployment group against which deployment agent will be registered."
+            }
+        },
+        "VSTSAgentName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "If not specified, the VM name with -DG appended will be used."
+            }
+        },
+        "VSTSTags": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "A comma-separated list of tags that will be set on the agent. Tags are not case sensitive and each must be no more than 256 characters."
+            }
+        },
+        "VSTSPATToken": {
+            "type": "securestring",
+            "metadata": {
+                "description": "The Personal Access Token that will be used to authenticate against the VSTS account to download and configure the agent."
+            }
+        }
+    },
+    "variables": {
+        "serviceName": "[parameters('serviceName')]",
+        "availabilitySetName": "[concat(variables('serviceName'), '-avs')]",
+        "networkInterfaceName": "[concat(variables('serviceName'), '-nic')]",
+        "artifacts": {
+            "location": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/disk-management-selection",
+            "sas": ""
+        },
+        "vm": {
+            "name": "[concat(variables('serviceName'), '-vm')]",
+            "os": "[parameters('vmOsVersion')]",
+            "imageOffer": "WindowsServer",
+            "imagePublisher": "MicrosoftWindowsServer",
+            "adminUserName": "[parameters('adminUserName')]"
+        },
+        "virtualNetwork": {
+            "name": "[parameters('virtualNetworkName')]",
+            "subnetName": "[parameters('virtualNetworkSubnetName')]"
+        },
+        "security": {
+            "networkSecurityGroupName": "[concat(variables('serviceName'), '-nsg')]"
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2017-03-30",
+            "type": "Microsoft.Compute/availabilitySets",
+            "name": "[concat(variables('availabilitySetName'))]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "AvailabilitySet"
+            },
+            "properties": {
+                "PlatformUpdateDomainCount": 3,
+                "PlatformFaultDomainCount": 2
+            },
+            "sku": {
+                "name": "Aligned"
+            }
+        },
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "name": "[variables('security').networkSecurityGroupName]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "NetworkSecurityGroup"
+            },
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "Allow-RDP",
+                        "properties": {
+                            "description": "Allow - RDP - From any source",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "Internet",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 500,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "Allow-HTTPS",
+                        "properties": {
+                            "description": "Allow - HTTPS - From any source",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
+                            "sourceAddressPrefix": "Internet",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1000,
+                            "direction": "Inbound"
+                        }
+                    },
+                    {
+                        "name": "Allow-HTTP",
+                        "properties": {
+                            "description": "Allow - HTTP - From any source",
+                            "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "80",
+                            "sourceAddressPrefix": "Internet",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 1500,
+                            "direction": "Inbound"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-03-01",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[variables('networkInterfaceName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "NetworkInterface"
+            },
+            "dependsOn": [],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAllocationMethod": "Dynamic",
+                            "subnet": {
+                                "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetwork').name), '/subnets/', variables('virtualNetwork').subnetName)]"
+                            },
+                            "loadBalancerBackendAddressPools": [],
+                            "loadBalancerInboundNatRules": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "2017-03-30",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[concat(variables('vm').name)]",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "displayName": "VirtualMachines"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]",
+                "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+            ],
+            "properties": {
+                "availabilitySet": {
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', variables('availabilitySetName'))]"
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "computerName": "[variables('vm').name]",
+                    "adminUsername": "[variables('vm').adminUserName]",
+                    "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "[variables('vm').imagePublisher]",
+                        "offer": "[variables('vm').imageOffer]",
+                        "sku": "[variables('vm').os]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('vm').name, 'osdisk')]",
+                        "caching": "ReadWrite",
+                        "createOption": "FromImage"
+                    },
+                    "copy": [
+                        {
+                            "name": "dataDisks",
+                            "count": "[int(parameters('numDataDisks'))]",
+                            "input": {
+                                "name": "[concat(variables('vm').name, 'datadisk', copyIndex('dataDisks'))]",
+                                "lun": "[copyIndex('dataDisks')]",
+                                "createOption": "Empty",
+                                "diskSizeGB": "1023"
+                            }
+                        }
+                    ]
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "type": "extensions",
+                    "name": "CreateStorageSpace",
+                    "apiVersion": "2015-06-15",
+                    "location": "[resourceGroup().location]",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vm').name)]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.Powershell",
+                        "type": "DSC",
+                        "typeHandlerVersion": "2.19",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "ModulesUrl": "[concat(variables('artifacts').location, '/DSC/createStorageSpace.zip', variables('artifacts').sas)]",
+                            "ConfigurationFunction": "CreateStorageSpace.ps1\\CreateStorageSpace",
+                            "Properties": {}
+                        },
+                        "protectedSettings": {}
+                    }
+                },
+                {
+                    "type": "extensions",
+                    "name": "TeamServicesAgent",
+                    "location": "[resourceGroup().location]",
+                    "apiVersion": "2015-06-15",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vm').name)]"
+                    ],
+                    "properties": {
+                        "publisher": "Microsoft.VisualStudio.Services",
+                        "type": "TeamServicesAgent",
+                        "typeHandlerVersion": "1.0",
+                        "autoUpgradeMinorVersion": true,
+                        "settings": {
+                            "VSTSAccountName": "[parameters('VSTSAccountName')]",
+                            "TeamProject": "[parameters('VSTSTeamProject')]",
+                            "DeploymentGroup": "[parameters('VSTSDeploymentGroup')]",
+                            "AgentName": "[parameters('VSTSAgentName')]",
+                            "Tags": "[parameters('VSTSTags')]"
+                        },
+                        "protectedSettings": {
+                            "PATToken": "[parameters('VSTSPATToken')]"
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {}
+}
