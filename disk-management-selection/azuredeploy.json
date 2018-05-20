@@ -52,7 +52,11 @@
                 "Standard_D1_v2",
                 "Standard_D2_v2",
                 "Standard_D3_v2",
-                "Standard_D4_v2"
+                "Standard_D4_v2",
+                "Standard_F1",
+                "Standard_F2",
+                "Standard_F4",
+                "Standard_F8"
             ],
             "metadata": {
                 "description": "VM: Size"
