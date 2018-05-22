@@ -42,7 +42,7 @@
             "sas": ""
         },
         "storage": {
-            "diagnostics" : {
+            "diagnostics": {
                 "accountName": "[concat('diagnostics', uniqueString(resourceGroup().id))]",
                 "storageType": "Standard_LRS"
             }
@@ -60,6 +60,10 @@
                     "dataDiskNumber": 2,
                     "dataDiskCaching": "None",
                     "dataDiskSize": "32"
+                },
+                "backup": {
+                    "container": "[concat('iaasvmcontainer;iaasvmcontainerv2;', resourceGroup().name, ';', variables('resourcePrefix'), '-vm-ad')]",
+                    "protectedItem": "[concat('vm;iaasvmcontainerv2;', resourceGroup().name, ';', variables('resourcePrefix'), '-vm-ad')]"
                 }
             },
             "rds": {
@@ -74,6 +78,10 @@
                     "dataDiskNumber": 4,
                     "dataDiskCaching": "ReadWrite",
                     "dataDiskSize": "128"
+                },
+                "backup": {
+                    "container": "[concat('iaasvmcontainer;iaasvmcontainerv2;', resourceGroup().name, ';', variables('resourcePrefix'), '-vm-rds')]",
+                    "protectedItem": "[concat('vm;iaasvmcontainerv2;', resourceGroup().name, ';', variables('resourcePrefix'), '-vm-rds')]"
                 }
             }
         },
@@ -102,9 +110,7 @@
         "recoveryVault": {
             "name": "[concat(variables('resourcePrefix'), '-rs')]",
             "policy": "DefaultPolicy",
-            "fabric": "Azure",
-            "container": "[concat('iaasvmcontainer;iaasvmcontainerv2;', resourceGroup().name, ';', variables('vm').name)]",
-            "protectedItem": "[concat('vm;iaasvmcontainerv2;', resourceGroup().name, ';', variables('vm').name)]"
+            "fabric": "Azure"
         }
     },
     "resources": [
@@ -277,6 +283,34 @@
             "properties": {}
         },
         {
+            "apiVersion": "2016-06-01",
+            "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+            "name": "[concat(variables('recoveryVault').name, '/', variables('recoveryVault').fabric, '/', variables('vm').activeDirectory.backup.container, '/', variables('vm').activeDirectory.backup.protectedItem)]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('vm').activeDirectory.name, '/extensions/createadforest')]",
+                "[resourceId('Microsoft.RecoveryServices/vaults/', variables('recoveryVault').name)]"
+            ],
+            "properties": {
+                "protectedItemType": "Microsoft.Compute/virtualMachines",
+                "policyId": "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', variables('recoveryVault').name, variables('recoveryVault').policy)]",
+                "sourceResourceId": "[resourceId('Microsoft.Compute/virtualMachines/', variables('vm').activeDirectory.name)]"
+            }
+        },
+        {
+            "apiVersion": "2016-06-01",
+            "type": "Microsoft.RecoveryServices/vaults/backupFabrics/protectionContainers/protectedItems",
+            "name": "[concat(variables('recoveryVault').name, '/', variables('recoveryVault').fabric, '/', variables('vm').rds.backup.container, '/', variables('vm').rds.backup.protectedItem)]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', variables('vm').rds.name, '/extensions/rdsDSC')]",
+                "[resourceId('Microsoft.RecoveryServices/vaults/', variables('recoveryVault').name)]"
+            ],
+            "properties": {
+                "protectedItemType": "Microsoft.Compute/virtualMachines",
+                "policyId": "[resourceId('Microsoft.RecoveryServices/vaults/backupPolicies', variables('recoveryVault').name, variables('recoveryVault').policy)]",
+                "sourceResourceId": "[resourceId('Microsoft.Compute/virtualMachines/', variables('vm').rds.name)]"
+            }
+        },
+        {
             "apiVersion": "2017-03-01",
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[concat(variables('resourcePrefix'), '-nic-ad')]",
@@ -356,8 +390,8 @@
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
-                      "enabled": true,
-                      "storageUri": "[reference(variables('storage').diagnostics.accountName, '2017-06-01').primaryEndpoints.blob]"
+                        "enabled": true,
+                        "storageUri": "[reference(variables('storage').diagnostics.accountName, '2017-06-01').primaryEndpoints.blob]"
                     }
                 }
             },
@@ -507,8 +541,8 @@
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
-                      "enabled": true,
-                      "storageUri": "[reference(variables('storage').diagnostics.accountName, '2017-06-01').primaryEndpoints.blob]"
+                        "enabled": true,
+                        "storageUri": "[reference(variables('storage').diagnostics.accountName, '2017-06-01').primaryEndpoints.blob]"
                     }
                 }
             },
