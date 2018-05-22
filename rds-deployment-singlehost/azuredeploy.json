@@ -42,10 +42,6 @@
             "sas": ""
         },
         "storage": {
-            "vhd": {
-                "accountName": "[concat('vhdstorage', uniqueString(resourceGroup().id))]",
-                "storageType": "Standard_LRS"
-            },
             "diagnostics" : {
                 "accountName": "[concat('diagnostics', uniqueString(resourceGroup().id))]",
                 "storageType": "Standard_LRS"
@@ -61,9 +57,9 @@
                 "adminUserName": "[parameters('adminUserName')]",
                 "availabilitySet": "[concat(variables('resourcePrefix'), '-avs-ad')]",
                 "storage": {
-                    "dataDiskNumber": 4,
+                    "dataDiskNumber": 2,
                     "dataDiskCaching": "None",
-                    "dataDiskSize": "1023"
+                    "dataDiskSize": "32"
                 }
             },
             "rds": {
@@ -77,7 +73,7 @@
                 "storage": {
                     "dataDiskNumber": 4,
                     "dataDiskCaching": "ReadWrite",
-                    "dataDiskSize": "1023"
+                    "dataDiskSize": "128"
                 }
             }
         },
@@ -108,17 +104,6 @@
         {
             "apiVersion": "2017-06-01",
             "type": "Microsoft.Storage/storageAccounts",
-            "name": "[variables('storage').vhd.accountName]",
-            "location": "[resourceGroup().location]",
-            "properties": {},
-            "sku": {
-                "name": "[variables('storage').vhd.storageType]"
-            },
-            "kind": "Storage"
-        },
-        {
-            "apiVersion": "2017-06-01",
-            "type": "Microsoft.Storage/storageAccounts",
             "name": "[variables('storage').diagnostics.accountName]",
             "location": "[resourceGroup().location]",
             "properties": {},
@@ -137,7 +122,7 @@
                 "PlatformFaultDomainCount": 2
             },
             "sku": {
-                "name": "Classic"
+                "name": "Aligned"
             }
         },
         {
@@ -150,7 +135,7 @@
                 "PlatformFaultDomainCount": 2
             },
             "sku": {
-                "name": "Classic"
+                "name": "Aligned"
             }
         },
         {
@@ -299,7 +284,6 @@
             "name": "[variables('vm').activeDirectory.name]",
             "location": "[resourceGroup().location]",
             "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').vhd.accountName)]",
                 "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('resourcePrefix'), '-nic-ad'))]",
                 "[resourceId('Microsoft.Compute/availabilitySets', variables('vm').activeDirectory.availabilitySet)]",
                 "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').diagnostics.accountName)]"
@@ -325,9 +309,6 @@
                     },
                     "osDisk": {
                         "name": "[concat(variables('vm').activeDirectory.name, '-osdisk.vhd')]",
-                        "vhd": {
-                            "uri": "[concat(reference(variables('storage').vhd.accountName, '2017-06-01').primaryEndpoints.blob, 'vhds/', variables('vm').activeDirectory.name, '-osdisk.vhd')]"
-                        },
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
                     },
@@ -340,9 +321,6 @@
                                 "diskSizeGB": "[variables('vm').activeDirectory.storage.dataDiskSize]",
                                 "lun": "[copyIndex('dataDisks')]",
                                 "name": "[concat(variables('vm').activeDirectory.name, '-datadisk-', copyIndex('dataDisks'))]",
-                                "vhd": {
-                                    "uri": "[concat(reference(variables('storage').vhd.accountName, '2017-06-01').primaryEndpoints.blob, 'vhds/', variables('vm').activeDirectory.name, '-datadisk-', copyIndex('dataDisks'), '.vhd')]"
-                                },
                                 "createOption": "Empty"
                             }
                         }
@@ -456,7 +434,6 @@
             "location": "[resourceGroup().location]",
             "dependsOn": [
                 "[resourceId('Microsoft.Compute/virtualMachines', variables('vm').activeDirectory.name)]",
-                "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').vhd.accountName)]",
                 "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('resourcePrefix'), '-nic-rds'))]",
                 "[resourceId('Microsoft.Compute/availabilitySets', variables('vm').rds.availabilitySet)]",
                 "[resourceId('Microsoft.Storage/storageAccounts', variables('storage').diagnostics.accountName)]",
@@ -482,10 +459,7 @@
                         "version": "latest"
                     },
                     "osDisk": {
-                        "name": "osdisk",
-                        "vhd": {
-                            "uri": "[concat(reference(variables('storage').vhd.accountName, '2016-01-01').primaryEndpoints.blob, 'vhds/', variables('vm').rds.name, '-osdisk.vhd')]"
-                        },
+                        "name": "[concat(variables('vm').rds.name, '-osdisk.vhd')]",
                         "caching": "ReadWrite",
                         "createOption": "FromImage"
                     },
@@ -495,12 +469,9 @@
                             "count": "[variables('vm').rds.storage.dataDiskNumber]",
                             "input": {
                                 "caching": "[variables('vm').rds.storage.dataDiskCaching]",
-                                "diskSizeGB": "[variables('vm').activeDirectory.storage.dataDiskSize]",
+                                "diskSizeGB": "[variables('vm').rds.storage.dataDiskSize]",
                                 "lun": "[copyIndex('dataDisks')]",
                                 "name": "[concat(variables('vm').rds.name, '-datadisk-', copyIndex('dataDisks'))]",
-                                "vhd": {
-                                    "uri": "[concat(reference(variables('storage').vhd.accountName, '2016-01-01').primaryEndpoints.blob, 'vhds/', variables('vm').rds.name, '-datadisk-', copyIndex('dataDisks'), '.vhd')]"
-                                },
                                 "createOption": "Empty"
                             }
                         }
