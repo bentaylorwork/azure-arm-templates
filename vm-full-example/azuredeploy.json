@@ -77,15 +77,14 @@
         }
     },
     "variables": {
-        "resourcePrefix": "[parameters('resourcePrefix')]",
-        "availabilitySetName": "[concat(variables('resourcePrefix'), '-avs')]",
-        "networkInterfaceName": "[concat(variables('resourcePrefix'), '-nic')]",
+        "availabilitySetName": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'avs')]",
+        "networkInterfaceName": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'nic')]",
         "artifacts": {
             "location": "https://raw.githubusercontent.com/bentaylorwork/azure-arm-templates/master/vm-full-example",
             "sas": ""
         },
         "vm": {
-            "name": "[concat(variables('resourcePrefix'), '-vm')]",
+            "name": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'vm')]",
             "os": "2016-Datacenter",
             "imageOffer": "WindowsServer",
             "imagePublisher": "MicrosoftWindowsServer",
@@ -136,22 +135,22 @@
             }
         },
         "loadBalancer": {
-            "name": "[concat(variables('resourcePrefix'), '-lb')]"
+            "name": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'lb')]"
         },
         "virtualNetwork": {
-            "name": "[concat(variables('resourcePrefix'), '-vnet')]",
-            "subnetName": "[concat(variables('resourcePrefix'), '-subnet')]"
+            "name": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'vnet')]",
+            "subnetName": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'subnet')]"
         },
         "security": {
-            "networkSecurityGroupName": "[concat(variables('resourcePrefix'), '-nsg')]",
+            "networkSecurityGroupName": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'nsg')]",
             "rdpIPAddress": "[parameters('publicIPAddressToAccessRDP')]"
         },
         "publicIP": {
-            "addressName": "[concat(variables('resourcePrefix'), '-pip')]",
+            "addressName": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'pip')]",
             "addressType": "[parameters('publicIPAddressType')]"
         },
         "recoveryVault": {
-            "name": "[concat(variables('resourcePrefix'), '-rs')]",
+            "name": "[bentaylorwork.resourceName(parameters('resourcePrefix'), 'rs')]",
             "policy": "DefaultPolicy",
             "fabric": "Azure",
             "container": "[concat('iaasvmcontainer;iaasvmcontainerv2;', resourceGroup().name, ';', variables('vm').name)]",
@@ -220,6 +219,29 @@
             }
         }
     },
+    "functions": [
+        {
+            "namespace": "bentaylorwork",
+            "members": {
+                "resourceName": {
+                    "parameters": [
+                        {
+                            "name": "namePrefix",
+                            "type": "string"
+                        },
+                        {
+                            "name": "resource",
+                            "type": "string"
+                        }
+                    ],
+                    "output": {
+                        "type": "string",
+                        "value": "[concat(toLower(parameters('namePrefix')), '-', toLower(parameters('resource')))]"
+                    }
+                }
+            }
+        }
+    ],
     "resources": [
         {
             "apiVersion": "2017-03-01",
@@ -490,10 +512,10 @@
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
-                      "enabled": true,
-                      "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storage').diagnostics.accountName)).primaryEndpoints.blob]"
+                        "enabled": true,
+                        "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts/', variables('storage').diagnostics.accountName)).primaryEndpoints.blob]"
                     }
-                  }
+                }
             },
             "resources": [
                 {
