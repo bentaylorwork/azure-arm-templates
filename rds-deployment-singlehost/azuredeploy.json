@@ -157,7 +157,10 @@
                     {
                         "name": "[variables('virtualNetwork').activeDirectorySubnet.name]",
                         "properties": {
-                            "addressPrefix": "[variables('virtualNetwork').activeDirectorySubnet.ipScheme]"
+                            "addressPrefix": "[variables('virtualNetwork').activeDirectorySubnet.ipScheme]",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('virtualNetwork').activeDirectorySubnet.networkSecurityGroupName)]"
+                            }
                         }
                     },
                     {
