@@ -98,6 +98,13 @@
         },
         "loadBalancer": {
             "name": "[concat(variables('resourcePrefix'), '-lb-rds')]"
+        },
+        "recoveryVault": {
+            "name": "[concat(variables('resourcePrefix'), '-rs')]",
+            "policy": "DefaultPolicy",
+            "fabric": "Azure",
+            "container": "[concat('iaasvmcontainer;iaasvmcontainerv2;', resourceGroup().name, ';', variables('vm').name)]",
+            "protectedItem": "[concat('vm;iaasvmcontainerv2;', resourceGroup().name, ';', variables('vm').name)]"
         }
     },
     "resources": [
@@ -257,6 +264,17 @@
                     }
                 ]
             }
+        },
+        {
+            "apiVersion": "2016-06-01",
+            "type": "Microsoft.RecoveryServices/vaults",
+            "name": "[variables('recoveryVault').name]",
+            "location": "[resourceGroup().location]",
+            "sku": {
+                "name": "RS0",
+                "tier": "Standard"
+            },
+            "properties": {}
         },
         {
             "apiVersion": "2017-03-01",
