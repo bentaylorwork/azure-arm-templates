@@ -1,0 +1,71 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the Azure Storage account."
+            }
+        },
+        "storageAccountContainers": {
+            "type": "array",
+            "defaultValue": [
+                {
+                    "name": "containerone",
+                    "access": "None"
+                },
+                {
+                    "name": "containertwo",
+                    "access": "Container"
+                },
+                {
+                    "name": "containerthree",
+                    "access": "Blob"
+                }
+            ],
+            "metadata": {
+                "description": "An Array of containers to be deployed to the storage account."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "The location in which the Azure Storage resources should be deployed."
+            }
+        }
+    },
+    "resources": [
+        {
+            "name": "[parameters('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2018-02-01",
+            "location": "[parameters('location')]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "name": "[concat(parameters('storageAccountName'), '/default/', parameters('storageAccountContainers')[copyindex('containercopy')].name)]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2018-07-01",
+            "dependsOn": [
+                "[parameters('storageAccountName')]"
+            ],
+            "copy": {
+                "name": "containercopy",
+                "count": "[length(parameters('storageAccountContainers'))]"
+            },
+            "properties": {
+                "publicAccess": "[parameters('storageAccountContainers')[copyindex('containercopy')].access]",
+                "metadata": {}
+            }
+        }
+    ]
+}
